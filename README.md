@@ -27,7 +27,7 @@ The test set includes attack types that never appear in training, so it is a har
 - XGBoost missed 4,380 attacks, compared with 4,828 for the baseline, and cut false alarms from 7.4% to 2.8%.
 - Lowering the decision threshold to 0.1 caught more attacks (recall 0.707) with only a small rise in false alarms.
 - Class weights and SMOTE gave only small gains on this dataset.
-- API speed: average XX ms per request, 95% of requests under XX ms (tested on a laptop).
+- API speed: average 40.1 ms per request, 95% of requests under 45.1 ms (100 requests, tested on a laptop).
 
 ## Run it yourself
 ```
