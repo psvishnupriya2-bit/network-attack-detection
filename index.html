@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Network Attack Detection</title>
+<style>
+  :root { --navy:#1f3864; --blue:#2e5395; --bg:#f3f6fb; --red:#c62828; --green:#2e7d32; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Arial, Helvetica, sans-serif; background:var(--bg); color:#222; }
+  header { background:var(--navy); color:#fff; padding:28px 20px; text-align:center; }
+  header h1 { margin:0 0 6px; font-size:26px; }
+  header p { margin:0; opacity:.85; font-size:15px; }
+  main { max-width:860px; margin:24px auto; padding:0 16px; }
+  .card { background:#fff; border-radius:10px; padding:22px; margin-bottom:20px; box-shadow:0 1px 4px rgba(0,0,0,.1); }
+  h2 { margin:0 0 14px; font-size:18px; color:var(--navy); }
+  .buttons { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  button { border:0; border-radius:6px; padding:10px 18px; font-size:15px; cursor:pointer; }
+  .ex { background:#e4ebf7; color:var(--navy); }
+  .ex:hover { background:#d3dff2; }
+  .go { background:var(--blue); color:#fff; font-weight:bold; }
+  .go:hover { background:var(--navy); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:14px; margin-bottom:18px; }
+  label { display:block; font-size:13px; color:#555; margin-bottom:4px; }
+  input, select { width:100%; padding:8px; border:1px solid #c5cddb; border-radius:6px; font-size:14px; }
+  #result { display:none; text-align:center; }
+  .verdict { font-size:34px; font-weight:bold; margin:6px 0; }
+  .attack { color:var(--red); } .normal { color:var(--green); }
+  .bar { height:16px; background:#e6e9ef; border-radius:8px; overflow:hidden; margin:12px auto; max-width:420px; }
+  .fill { height:100%; width:0; background:var(--green); transition:width .5s; }
+  .facts { display:flex; justify-content:center; gap:28px; flex-wrap:wrap; margin-top:12px; font-size:14px; }
+  .facts b { display:block; font-size:18px; }
+  .msg { margin:10px 0 0; font-size:15px; }
+  details { margin-top:14px; text-align:left; font-size:13px; }
+  pre { background:#f1f3f7; padding:10px; border-radius:6px; overflow:auto; }
+  footer { text-align:center; font-size:13px; color:#666; padding-bottom:28px; }
+  footer a { color:var(--blue); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Network Attack Detection</h1>
+  <p>Check whether a network connection looks normal or like an attack</p>
+</header>
+<main>
+  <div class="card">
+    <h2>1. Choose a connection</h2>
+    <div class="buttons">
+      <button class="ex" onclick="loadExample('attack')">Load attack example</button>
+      <button class="ex" onclick="loadExample('normal')">Load normal example</button>
+    </div>
+    <div class="grid">
+      <div><label>Flag</label>
+        <select id="flag"><option>SF</option><option>S0</option><option>REJ</option><option>RSTO</option><option>RSTR</option><option>SH</option></select></div>
+      <div><label>SYN error rate (0 to 1)</label><input type="number" id="serror_rate" min="0" max="1" step="0.01"></div>
+      <div><label>Connections in last 2 sec (count)</label><input type="number" id="count" min="0"></div>
+      <div><label>Bytes sent (src_bytes)</label><input type="number" id="src_bytes" min="0"></div>
+    </div>
+    <button class="go" onclick="check()">Check this connection</button>
+  </div>
+
+  <div class="card" id="result">
+    <h2>2. Result</h2>
+    <div class="verdict" id="verdict"></div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div>Attack probability: <b id="prob"></b></div>
+    <div class="facts">
+      <div>Risk level<b id="risk"></b></div>
+      <div>Confidence<b id="conf"></b></div>
+      <div>Response time<b id="time"></b></div>
+    </div>
+    <p class="msg" id="msg"></p>
+    <details><summary>Show raw JSON</summary><pre id="raw"></pre></details>
+  </div>
+</main>
+<footer>
+  Model: XGBoost trained on NSL-KDD &nbsp;|&nbsp; <a href="/docs">API documentation</a>
+</footer>
+
+<script>
+const BASE = {duration:0,protocol_type:"tcp",service:"private",flag:"S0",src_bytes:0,dst_bytes:0,land:0,wrong_fragment:0,urgent:0,hot:0,num_failed_logins:0,logged_in:0,num_compromised:0,root_shell:0,su_attempted:0,num_root:0,num_file_creations:0,num_shells:0,num_access_files:0,num_outbound_cmds:0,is_host_login:0,is_guest_login:0,count:123,srv_count:6,serror_rate:1.0,srv_serror_rate:1.0,rerror_rate:0.0,srv_rerror_rate:0.0,same_srv_rate:0.05,diff_srv_rate:0.07,srv_diff_host_rate:0.0,dst_host_count:255,dst_host_srv_count:26,dst_host_same_srv_rate:0.1,dst_host_diff_srv_rate:0.05,dst_host_same_src_port_rate:0.0,dst_host_srv_diff_host_rate:0.0,dst_host_serror_rate:1.0,dst_host_srv_serror_rate:1.0,dst_host_rerror_rate:0.0,dst_host_srv_rerror_rate:0.0};
+const EXAMPLES = {
+  attack: BASE,
+  normal: {...BASE,protocol_type:"tcp",service:"ftp_data",flag:"SF",src_bytes:491,dst_bytes:0,count:2,srv_count:2,serror_rate:0.0,srv_serror_rate:0.0,same_srv_rate:1.0,diff_srv_rate:0.0,dst_host_count:150,dst_host_srv_count:25,dst_host_same_srv_rate:0.17,dst_host_diff_srv_rate:0.03,dst_host_same_src_port_rate:0.17,dst_host_serror_rate:0.0,dst_host_srv_serror_rate:0.0,dst_host_rerror_rate:0.05}
+};
+const FIELDS = ["flag","serror_rate","count","src_bytes"];
+const TEXT = ["flag"];
+let base = EXAMPLES.attack;
+
+function loadExample(name) {
+  base = EXAMPLES[name];
+  FIELDS.forEach(f => document.getElementById(f).value = base[f]);
+  document.getElementById("result").style.display = "none";
+}
+
+async function check() {
+  const record = {...base};
+  FIELDS.forEach(f => {
+    const v = document.getElementById(f).value;
+    record[f] = TEXT.includes(f) ? v : Number(v);
+  });
+  // Keep the other three SYN error fields in step with the one on the page
+  record.srv_serror_rate = record.serror_rate;
+  record.dst_host_serror_rate = record.serror_rate;
+  record.dst_host_srv_serror_rate = record.serror_rate;
+  const start = performance.now();
+  try {
+    const res = await fetch("/predict", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(record)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Request failed");
+    show(data, Math.round(performance.now() - start));
+  } catch (e) {
+    alert("Something went wrong: " + e.message);
+  }
+}
+
+function show(d, ms) {
+  const isAttack = d.prediction === "attack";
+  const v = document.getElementById("verdict");
+  v.textContent = isAttack ? "ATTACK DETECTED" : "NORMAL TRAFFIC";
+  v.className = "verdict " + (isAttack ? "attack" : "normal");
+  const fill = document.getElementById("fill");
+  fill.style.width = (d.attack_probability * 100) + "%";
+  fill.style.background = isAttack ? "var(--red)" : "var(--green)";
+  document.getElementById("prob").textContent = (d.attack_probability * 100).toFixed(2) + "%";
+  document.getElementById("risk").textContent = d.risk_level;
+  document.getElementById("conf").textContent = d.confidence_percent + "%";
+  document.getElementById("time").textContent = ms + " ms";
+  document.getElementById("msg").textContent = d.message;
+  document.getElementById("raw").textContent = JSON.stringify(d, null, 2);
+  document.getElementById("result").style.display = "block";
+}
+
+loadExample("attack");
+</script>
+</body>
+</html>
