@@ -1,4 +1,5 @@
 # Network Attack Detection
+
 **Live demo:** https://network-attack-detection-wmz2.onrender.com
 
 *Free hosting: the first load after a quiet period can take about a minute.*
@@ -38,7 +39,7 @@ pip install -r requirements.txt
 python download_data.py
 uvicorn app:app --reload
 ```
-Then open http://127.0.0.1:8000/docs to try the API.
+Then open http://127.0.0.1:8000/ to try the API.
 
 ## Files
 - `attack_detection.ipynb`: data exploration, training and evaluation
