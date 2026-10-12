@@ -1,4 +1,7 @@
 # Network Attack Detection
+**Live demo:** https://network-attack-detection-wmz2.onrender.com
+
+*Free hosting: the first load after a quiet period can take about a minute.*
 
 A machine learning project that flags suspicious network traffic as "normal" or "attack", served through a fast API.
 
