@@ -55,6 +55,29 @@
   .oc b, .ow b { display:block; font-size:20px; }
   .note { max-width:600px; margin:10px auto 0; padding:10px 12px; background:#eef3fb; border-left:4px solid var(--blue); border-radius:6px; font-size:14px; }
 
+
+  .alarmbar { text-align:center; font-size:20px; font-weight:bold; padding:16px; border-radius:10px; margin-bottom:16px; }
+  .alarmbar.clear { background:#e3f2e4; color:var(--green); }
+  .alarmbar.calm { background:#fff4d6; color:#8a5a00; }
+  .alarmbar.alarm { background:var(--red); color:#fff; animation:blink 0.8s infinite; }
+  @keyframes blink { 50% { opacity:.55; } }
+  .controls { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; font-size:14px; }
+  .controls select { width:auto; }
+  .start { background:var(--green); color:#fff; font-weight:bold; }
+  .stop { background:var(--red); color:#fff; font-weight:bold; }
+  .reset { background:#e4ebf7; color:var(--navy); }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:18px; }
+  .tile { background:#f3f6fb; border-radius:8px; padding:12px; text-align:center; }
+  .tile b { display:block; font-size:24px; color:var(--navy); margin-top:2px; }
+  .tile span { font-size:12px; color:#666; }
+  .tl { display:flex; align-items:flex-end; gap:3px; height:120px; position:relative; background:#f6f8fc; border-bottom:1px solid #bbb; padding:0 2px; }
+  .tlbar { flex:1; min-width:4px; border-radius:3px 3px 0 0; }
+  .tl50 { position:absolute; left:0; right:0; bottom:50%; border-top:1px dashed #888; }
+  .tllabel { display:flex; justify-content:space-between; font-size:12px; color:#666; margin:4px 0 14px; }
+  table.log { width:100%; border-collapse:collapse; font-size:14px; }
+  table.log th { text-align:left; background:#eef2f9; color:var(--navy); padding:8px; }
+  table.log td { padding:7px 8px; border-bottom:1px solid #e6e9ef; }
+  .tag-a { color:var(--red); font-weight:bold; } .tag-s { color:var(--green); font-weight:bold; }
   footer { text-align:center; font-size:13px; color:#666; padding-bottom:28px; }
   footer a { color:var(--blue); }
 </style>
@@ -151,6 +174,46 @@
       <div class="note">Tested on 22,544 unseen connections. This page uses the standard 50% cutoff. Lowering the cutoff to 10% catches 70.7% of attacks, with about 3.0% false alarms.</div>
     </div>
   </div>
+
+  <div class="card" id="alarmPanel">
+    <h2>3. Alarm Panel</h2>
+    <div class="alarmbar clear" id="alarmBar">All clear. No checks yet</div>
+
+    <div class="controls">
+      <button class="start" onclick="simStart()">Start demo traffic</button>
+      <button class="stop" onclick="simStop()">Stop</button>
+      <select id="mix">
+        <option value="0.1">Mostly safe (10% attacks)</option>
+        <option value="0.3" selected>Mixed (30% attacks)</option>
+        <option value="0.7">Under attack (70% attacks)</option>
+      </select>
+      <label style="display:inline;margin:0"><input type="checkbox" id="sound" checked style="width:auto"> Alarm sound</label>
+      <button class="reset" onclick="resetPanel()">Reset</button>
+      <span id="simState" style="color:#666"></span>
+    </div>
+
+    <div class="tiles">
+      <div class="tile"><span>Total checks</span><b id="tTotal">0</b></div>
+      <div class="tile"><span>Alarms raised</span><b id="tAlarms">0</b></div>
+      <div class="tile"><span>Safe results</span><b id="tSafe">0</b></div>
+      <div class="tile"><span>Alarm rate</span><b id="tRate">0%</b></div>
+      <div class="tile"><span>Alarms in last 1 min</span><b id="t1">0</b></div>
+      <div class="tile"><span>Alarms in last 5 min</span><b id="t5">0</b></div>
+      <div class="tile"><span>Last alarm at</span><b id="tLast" style="font-size:18px">None yet</b></div>
+      <div class="tile"><span>Session time</span><b id="tSession">00:00</b></div>
+    </div>
+
+    <div class="chart" style="max-width:none">
+      <h3>Timeline: chance of attack for each check</h3>
+      <p class="cap">Each bar is one check (latest 30). Red bars raised an alarm, green bars were safe. The dashed line is the 50% cutoff.</p>
+      <div class="tl" id="tlBox"><div class="tl50"></div></div>
+      <div class="tllabel"><span id="tlFirst">No checks yet</span><span id="tlLast"></span></div>
+    </div>
+
+    <h3 style="margin:0 0 8px;font-size:16px;color:var(--navy)">Alarm log (latest 8 checks)</h3>
+    <div id="logBox"></div>
+    <div class="note" style="max-width:none">These numbers count the checks made on this page, in this browser, since you opened it. They are not from a live network. Demo traffic is simulated: random variations of the two examples, and the model decides each verdict. Refreshing the page resets everything.</div>
+  </div>
 </main>
 <footer>
   Model: XGBoost trained on NSL-KDD &nbsp;|&nbsp; <a href="/docs">API documentation</a>
@@ -216,8 +279,8 @@ function readInputs() {
   return inp;
 }
 
-function buildRecord(inp) {
-  const record = {...base, ...inp};
+function buildRecord(inp, b) {
+  const record = {...(b || base), ...inp};
   record.srv_serror_rate = inp.serror_rate;
   record.dst_host_serror_rate = inp.serror_rate;
   record.dst_host_srv_serror_rate = inp.serror_rate;
@@ -284,10 +347,128 @@ async function check() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Request failed");
     show(data, Math.round(performance.now() - start), inp);
+    recordEvent(data, inp.flag, "You");
   } catch (e) {
     alert("Something went wrong: " + e.message);
   }
 }
+
+
+// ---------- alarm panel ----------
+const events = [];
+let simTimer = null;
+let audioCtx = null;
+
+function beep() {
+  if (!$("sound").checked) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = audioCtx.currentTime;
+    [0, 0.25, 0.5].forEach(o => {
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = "square"; osc.frequency.value = 880; g.gain.value = 0.05;
+      osc.connect(g); g.connect(audioCtx.destination);
+      osc.start(t0 + o); osc.stop(t0 + o + 0.15);
+    });
+  } catch (e) {}
+}
+
+function fmtTime(t) { return t.toLocaleTimeString("en-GB"); }
+function mmss(sec) {
+  return String(Math.floor(sec / 60)).padStart(2, "0") + ":" + String(sec % 60).padStart(2, "0");
+}
+
+function recordEvent(d, flag, source) {
+  const attack = d.prediction === "attack";
+  events.push({t: new Date(), attack: attack, p: d.attack_probability, flag: flag, source: source});
+  if (attack) beep();
+  renderPanel();
+}
+
+function renderPanel() {
+  const now = Date.now();
+  const total = events.length;
+  const alarms = events.filter(e => e.attack);
+  const last1 = alarms.filter(e => now - e.t.getTime() <= 60000).length;
+  const last5 = alarms.filter(e => now - e.t.getTime() <= 300000).length;
+  const rate = total ? (alarms.length / total) * 100 : 0;
+
+  $("tTotal").textContent = total;
+  $("tAlarms").textContent = alarms.length;
+  $("tSafe").textContent = total - alarms.length;
+  $("tRate").textContent = rate.toFixed(0) + "%";
+  $("t1").textContent = last1;
+  $("t5").textContent = last5;
+  $("tLast").textContent = alarms.length ? fmtTime(alarms[alarms.length - 1].t) : "None yet";
+  $("tSession").textContent = total ? mmss(Math.floor((now - events[0].t.getTime()) / 1000)) : "00:00";
+
+  const bar = $("alarmBar");
+  if (alarms.length && now - alarms[alarms.length - 1].t.getTime() <= 10000) {
+    bar.className = "alarmbar alarm";
+    bar.textContent = "ALARM! Attack detected at " + fmtTime(alarms[alarms.length - 1].t);
+  } else if (alarms.length) {
+    bar.className = "alarmbar calm";
+    bar.textContent = "Calm now. Last alarm at " + fmtTime(alarms[alarms.length - 1].t);
+  } else {
+    bar.className = "alarmbar clear";
+    bar.textContent = total ? "All clear. No alarms so far" : "All clear. No checks yet";
+  }
+
+  const recent = events.slice(-30);
+  $("tlBox").innerHTML = '<div class="tl50"></div>' + recent.map(e =>
+    '<div class="tlbar" title="' + fmtTime(e.t) + ': ' + (e.p * 100).toFixed(1) + '% chance of attack" style="height:' +
+    Math.max(3, e.p * 100).toFixed(1) + '%;background:' + (e.attack ? "var(--red)" : "var(--green)") + '"></div>').join("");
+  $("tlFirst").textContent = recent.length ? "First shown: " + fmtTime(recent[0].t) : "No checks yet";
+  $("tlLast").textContent = recent.length ? "Latest: " + fmtTime(recent[recent.length - 1].t) : "";
+
+  const rows = events.slice(-8).reverse().map(e =>
+    "<tr><td>" + fmtTime(e.t) + "</td><td>" + e.source + "</td><td class=\"" + (e.attack ? "tag-a" : "tag-s") + "\">" +
+    (e.attack ? "ALARM (attack)" : "Safe") + "</td><td>" + (e.p * 100).toFixed(2) + "%</td><td>" + e.flag + "</td></tr>").join("");
+  $("logBox").innerHTML = total
+    ? '<table class="log"><tr><th>Time</th><th>Source</th><th>Verdict</th><th>Chance of attack</th><th>Flag</th></tr>' + rows + "</table>"
+    : "<p class=\"cap\">No checks yet. Click Check Vulnerability, or Start demo traffic.</p>";
+}
+
+function resetPanel() { events.length = 0; renderPanel(); }
+
+// ---------- demo traffic (simulated) ----------
+function simStop() {
+  if (simTimer) clearInterval(simTimer);
+  simTimer = null;
+  $("simState").textContent = "Demo traffic stopped";
+}
+
+function simStart() {
+  if (simTimer) return;
+  $("simState").textContent = "Demo traffic running (one check every 3 seconds)";
+  simTick();
+  simTimer = setInterval(simTick, 3000);
+}
+
+async function simTick() {
+  const rnd = (a, b) => Math.floor(a + Math.random() * (b - a + 1));
+  const isAttack = Math.random() < Number($("mix").value);
+  const inp = isAttack
+    ? {flag: "S0", serror_rate: 0.8 + rnd(0, 20) / 100, count: rnd(90, 250), src_bytes: 0}
+    : {flag: "SF", serror_rate: 0, count: rnd(1, 8), src_bytes: rnd(100, 900)};
+  const record = buildRecord(inp, isAttack ? EXAMPLES.attack : EXAMPLES.normal);
+  try {
+    const res = await fetch("/predict", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(record)
+    });
+    const data = await res.json();
+    if (res.ok) recordEvent(data, inp.flag, "Demo");
+  } catch (e) {
+    simStop();
+    $("simState").textContent = "Demo stopped: could not reach the server";
+  }
+}
+
+setInterval(renderPanel, 1000);
+renderPanel();
 
 buildStaticGraphs();
 loadExample("attack");
