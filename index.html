@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Network Attack Detection</title>
 <style>
-  :root { --navy:#1f3864; --blue:#2e5395; --bg:#f3f6fb; --red:#c62828; --green:#2e7d32; }
+  :root { --navy:#1f3864; --blue:#2e5395; --bg:#f3f6fb; --red:#c62828; --green:#2e7d32; --amber:#ef8f00; --grey:#8a93a5; }
   * { box-sizing: border-box; }
   body { margin:0; font-family: Arial, Helvetica, sans-serif; background:var(--bg); color:#222; }
   header { background:var(--navy); color:#fff; padding:28px 20px; text-align:center; }
@@ -16,23 +16,45 @@
   h2 { margin:0 0 14px; font-size:18px; color:var(--navy); }
   .buttons { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
   button { border:0; border-radius:6px; padding:10px 18px; font-size:15px; cursor:pointer; }
-  .ex { background:#e4ebf7; color:var(--navy); }
-  .ex:hover { background:#d3dff2; }
-  .go { background:var(--blue); color:#fff; font-weight:bold; }
-  .go:hover { background:var(--navy); }
+  .ex { background:#e4ebf7; color:var(--navy); } .ex:hover { background:#d3dff2; }
+  .go { background:var(--blue); color:#fff; font-weight:bold; } .go:hover { background:var(--navy); }
   .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:14px; margin-bottom:18px; }
   label { display:block; font-size:13px; color:#555; margin-bottom:4px; }
   input, select { width:100%; padding:8px; border:1px solid #c5cddb; border-radius:6px; font-size:14px; }
-  #result { display:none; text-align:center; }
-  .verdict { font-size:34px; font-weight:bold; margin:6px 0; }
+  #result { display:none; }
+  .verdict { text-align:center; font-size:34px; font-weight:bold; margin:6px 0 14px; }
   .attack { color:var(--red); } .normal { color:var(--green); }
-  .bar { height:16px; background:#e6e9ef; border-radius:8px; overflow:hidden; margin:12px auto; max-width:420px; }
-  .fill { height:100%; width:0; background:var(--green); transition:width .5s; }
-  .facts { display:flex; justify-content:center; gap:28px; flex-wrap:wrap; margin-top:12px; font-size:14px; }
+
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; border-bottom:2px solid #e1e6ef; margin-bottom:18px; }
+  .tab { background:#eef2f9; color:var(--navy); border-radius:8px 8px 0 0; padding:10px 16px; font-size:15px; font-weight:bold; }
+  .tab.active { background:var(--blue); color:#fff; }
+  .pane { display:none; } .pane.show { display:block; }
+
+  .chart { max-width:600px; margin:14px auto 20px; }
+  .chart h3 { margin:0 0 4px; font-size:16px; color:var(--navy); }
+  .cap { margin:0 0 10px; font-size:13px; color:#666; }
+  .row { display:flex; align-items:center; gap:10px; margin:7px 0; }
+  .lab { width:140px; font-size:14px; font-weight:bold; flex-shrink:0; }
+  .track { flex:1; height:22px; background:#e6e9ef; border-radius:5px; overflow:hidden; }
+  .bar { height:100%; border-radius:5px; transition:width .6s; }
+  .val { width:92px; text-align:right; font-size:14px; flex-shrink:0; }
+  .legend { font-size:13px; color:#444; margin-top:8px; }
+  .legend span { display:inline-block; margin-right:14px; }
+  .dot { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:middle; }
+
+  .facts { display:flex; justify-content:center; gap:28px; flex-wrap:wrap; margin-top:12px; font-size:14px; text-align:center; }
   .facts b { display:block; font-size:18px; }
-  .msg { margin:10px 0 0; font-size:15px; }
+  .msg { margin:10px 0 0; font-size:15px; text-align:center; }
   details { margin-top:14px; text-align:left; font-size:13px; }
   pre { background:#f1f3f7; padding:10px; border-radius:6px; overflow:auto; }
+
+  .outcomes { display:grid; grid-template-columns:130px 1fr 1fr; gap:6px; max-width:600px; margin:10px auto 6px; font-size:14px; }
+  .outcomes div { padding:12px 10px; border-radius:8px; text-align:center; }
+  .oh { background:#eef2f9; color:var(--navy); font-weight:bold; font-size:13px; }
+  .oc { background:#e3f2e4; } .ow { background:#fdecea; }
+  .oc b, .ow b { display:block; font-size:20px; }
+  .note { max-width:600px; margin:10px auto 0; padding:10px 12px; background:#eef3fb; border-left:4px solid var(--blue); border-radius:6px; font-size:14px; }
+
   footer { text-align:center; font-size:13px; color:#666; padding-bottom:28px; }
   footer a { color:var(--blue); }
 </style>
@@ -44,7 +66,7 @@
 </header>
 <main>
   <div class="card">
-    <h2>1. Choose a connection</h2>
+    <h2>1. User Entry: Enter Connection Details</h2>
     <div class="buttons">
       <button class="ex" onclick="loadExample('attack')">Load attack example</button>
       <button class="ex" onclick="loadExample('normal')">Load normal example</button>
@@ -56,21 +78,78 @@
       <div><label>Connections in last 2 sec (count)</label><input type="number" id="count" min="0"></div>
       <div><label>Bytes sent (src_bytes)</label><input type="number" id="src_bytes" min="0"></div>
     </div>
-    <button class="go" onclick="check()">Check this connection</button>
+    <button class="go" onclick="check()">Check Vulnerability</button>
   </div>
 
   <div class="card" id="result">
-    <h2>2. Result</h2>
+    <h2>2. System Response: Detection Report</h2>
     <div class="verdict" id="verdict"></div>
-    <div class="bar"><div class="fill" id="fill"></div></div>
-    <div>Attack probability: <b id="prob"></b></div>
-    <div class="facts">
-      <div>Risk level<b id="risk"></b></div>
-      <div>Confidence<b id="conf"></b></div>
-      <div>Response time<b id="time"></b></div>
+
+    <div class="tabs">
+      <button class="tab active" id="tab0" onclick="showTab(0)">Result</button>
+      <button class="tab" id="tab1" onclick="showTab(1)">Compare</button>
+      <button class="tab" id="tab2" onclick="showTab(2)">All possibilities</button>
+      <button class="tab" id="tab3" onclick="showTab(3)">How reliable</button>
     </div>
-    <p class="msg" id="msg"></p>
-    <details><summary>Show raw JSON</summary><pre id="raw"></pre></details>
+
+    <div class="pane show" id="pane0">
+      <div class="chart">
+        <h3>Chance of attack and not an attack</h3>
+        <p class="cap">The two always add up to 100%.</p>
+        <div class="row"><span class="lab">Attack</span><div class="track"><div class="bar" id="barA" style="width:0;background:var(--red)"></div></div><b class="val" id="pctA"></b></div>
+        <div class="row"><span class="lab">Not an attack</span><div class="track"><div class="bar" id="barS" style="width:0;background:var(--green)"></div></div><b class="val" id="pctS"></b></div>
+      </div>
+      <div class="facts">
+        <div>Risk level<b id="risk"></b></div>
+        <div>Confidence<b id="conf"></b></div>
+        <div>Response time<b id="time"></b></div>
+      </div>
+      <p class="msg" id="msg"></p>
+      <details><summary>Show raw JSON</summary><pre id="raw"></pre></details>
+    </div>
+
+    <div class="pane" id="pane1">
+      <div id="compareBox"></div>
+      <div class="legend"><span><i class="dot" style="background:var(--blue)"></i>You</span><span><i class="dot" style="background:var(--green)"></i>Safe example</span><span><i class="dot" style="background:var(--red)"></i>Attack example</span></div>
+    </div>
+
+    <div class="pane" id="pane2">
+      <div class="chart">
+        <h3>Kinds of attacks the model learned from</h3>
+        <p class="cap">Out of 58,630 attack records in the training data.</p>
+        <div id="typesBox"></div>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--red)"></i>Flood (DoS): overload a server</span>
+          <span><i class="dot" style="background:var(--amber)"></i>Scan (Probe): look for weak points</span>
+          <span><i class="dot" style="background:var(--blue)"></i>Break-in (R2L): a stranger tries to get in</span>
+          <span><i class="dot" style="background:var(--grey)"></i>Other rare types</span>
+        </div>
+      </div>
+      <div class="chart">
+        <h3>All 4 possible outcomes of a check</h3>
+        <p class="cap">Real counts from 22,544 test connections the model had never seen.</p>
+        <div class="outcomes">
+          <div class="oh"></div><div class="oh">Model says SAFE</div><div class="oh">Model says ATTACK</div>
+          <div class="oh">Really SAFE</div><div class="oc"><b>9,435</b>Correct: safe passed</div><div class="ow"><b>276</b>False alarm</div>
+          <div class="oh">Really an ATTACK</div><div class="ow"><b>4,380</b>Attack missed</div><div class="oc"><b>8,453</b>Correct: attack caught</div>
+        </div>
+        <div class="note" id="reliab"></div>
+      </div>
+    </div>
+
+    <div class="pane" id="pane3">
+      <div class="chart">
+        <h3>Attacks caught, by model</h3>
+        <p class="cap">Higher is better. This page uses XGBoost.</p>
+        <div id="recallBox"></div>
+      </div>
+      <div class="chart">
+        <h3>False alarms, by model</h3>
+        <p class="cap">Lower is better.</p>
+        <div id="falseBox"></div>
+      </div>
+      <div class="note">Tested on 22,544 unseen connections. This page uses the standard 50% cutoff. Lowering the cutoff to 10% catches 70.7% of attacks, with about 3.0% false alarms.</div>
+    </div>
   </div>
 </main>
 <footer>
@@ -86,23 +165,115 @@ const EXAMPLES = {
 const FIELDS = ["flag","serror_rate","count","src_bytes"];
 const TEXT = ["flag"];
 let base = EXAMPLES.attack;
+const $ = (id) => document.getElementById(id);
 
+// ---------- small chart helper ----------
+function barRow(label, value, max, color, text) {
+  const w = max > 0 ? Math.min(100, (value / max) * 100) : 0;
+  return '<div class="row"><span class="lab">' + label + '</span><div class="track"><div class="bar" style="width:' + w.toFixed(1) + '%;background:' + color + '"></div></div><b class="val">' + text + '</b></div>';
+}
+
+// ---------- fixed graphs (real numbers from the project) ----------
+function buildStaticGraphs() {
+  const red = "var(--red)", amber = "var(--amber)", blue = "var(--blue)", grey = "var(--grey)", green = "var(--green)";
+  const types = [
+    ["neptune (flood)", 41214, red], ["satan (scan)", 3633, amber], ["ipsweep (scan)", 3599, amber],
+    ["portsweep (scan)", 2931, amber], ["smurf (flood)", 2646, red], ["nmap (scan)", 1493, amber],
+    ["back (flood)", 956, red], ["teardrop (flood)", 892, red], ["warezclient (break-in)", 890, blue],
+    ["Other rare types", 376, grey]
+  ];
+  $("typesBox").innerHTML = types.map(t => barRow(t[0], t[1], 41214, t[2], t[1].toLocaleString("en-US"))).join("");
+
+  const models = [
+    ["Logistic Regression", 62.4, 7.4, blue], ["Random Forest", 60.8, 2.7, blue],
+    ["XGBoost (used here)", 65.9, 2.8, green], ["XGBoost, 10% cutoff", 70.7, 3.0, blue]
+  ];
+  $("recallBox").innerHTML = models.map(m => barRow(m[0], m[1], 100, m[3], m[1].toFixed(1) + "%")).join("");
+  $("falseBox").innerHTML = models.map(m => barRow(m[0], m[2], 20, m[3], m[2].toFixed(1) + "%")).join("");
+}
+
+// ---------- tabs ----------
+function showTab(i) {
+  for (let k = 0; k < 4; k++) {
+    $("pane" + k).className = "pane" + (k === i ? " show" : "");
+    $("tab" + k).className = "tab" + (k === i ? " active" : "");
+  }
+}
+
+// ---------- inputs ----------
 function loadExample(name) {
   base = EXAMPLES[name];
-  FIELDS.forEach(f => document.getElementById(f).value = base[f]);
-  document.getElementById("result").style.display = "none";
+  FIELDS.forEach(f => $(f).value = base[f]);
+  $("result").style.display = "none";
+}
+
+function readInputs() {
+  const inp = {};
+  FIELDS.forEach(f => {
+    const v = $(f).value;
+    inp[f] = TEXT.includes(f) ? v : (Number(v) || 0);
+  });
+  return inp;
+}
+
+function buildRecord(inp) {
+  const record = {...base, ...inp};
+  record.srv_serror_rate = inp.serror_rate;
+  record.dst_host_serror_rate = inp.serror_rate;
+  record.dst_host_srv_serror_rate = inp.serror_rate;
+  return record;
+}
+
+// ---------- compare graph (uses the user's inputs) ----------
+function buildCompare(inp) {
+  const N = EXAMPLES.normal, A = EXAMPLES.attack;
+  function chart(title, cap, you, safe, atk, max, fmt) {
+    return '<div class="chart"><h3>' + title + '</h3><p class="cap">' + cap + '</p>' +
+      barRow("You", you, max, "var(--blue)", fmt(you)) +
+      barRow("Safe example", safe, max, "var(--green)", fmt(safe)) +
+      barRow("Attack example", atk, max, "var(--red)", fmt(atk)) + '</div>';
+  }
+  const pct = (x) => (x * 100).toFixed(0) + "%";
+  const num = (x) => Number(x).toLocaleString("en-US");
+  let html = "";
+  html += chart("SYN error rate", "Share of connection attempts left unfinished. High is a flood warning sign.", inp.serror_rate, N.serror_rate, A.serror_rate, 1, pct);
+  html += chart("Connections in the last 2 seconds", "A flood sends a very large number.", inp.count, N.count, A.count, Math.max(inp.count, A.count, 1), num);
+  html += chart("Bytes sent", "Zero means the connection opened but no real data moved.", inp.src_bytes, N.src_bytes, A.src_bytes, Math.max(inp.src_bytes, N.src_bytes, 1), num);
+  html += '<div class="note">Flag: you <b>' + inp.flag + '</b>, safe example <b>' + N.flag + '</b>, attack example <b>' + A.flag + '</b>. SF means it finished properly; S0 means the server never answered.</div>';
+  $("compareBox").innerHTML = html;
+}
+
+// ---------- show the result ----------
+function show(d, ms, inp) {
+  const isAttack = d.prediction === "attack";
+  const v = $("verdict");
+  v.textContent = isAttack ? "ATTACK DETECTED" : "NORMAL TRAFFIC";
+  v.className = "verdict " + (isAttack ? "attack" : "normal");
+
+  const attackPct = d.attack_probability * 100;
+  const safePct = 100 - attackPct;
+  $("barA").style.width = attackPct.toFixed(2) + "%";
+  $("barS").style.width = safePct.toFixed(2) + "%";
+  $("pctA").textContent = attackPct.toFixed(2) + "%";
+  $("pctS").textContent = safePct.toFixed(2) + "%";
+  $("risk").textContent = d.risk_level;
+  $("conf").textContent = d.confidence_percent + "%";
+  $("time").textContent = ms + " ms";
+  $("msg").textContent = d.message;
+  $("raw").textContent = JSON.stringify(d, null, 2);
+
+  $("reliab").textContent = isAttack
+    ? "Your result says ATTACK. On the test data, when the model said attack it was right about 97% of the time (8,453 of 8,729)."
+    : "Your result says NORMAL. On the test data, when the model said normal it was right about 68% of the time (9,435 of 13,815), because some attacks slip through. Treat it as a first check.";
+
+  buildCompare(inp);
+  showTab(0);
+  $("result").style.display = "block";
 }
 
 async function check() {
-  const record = {...base};
-  FIELDS.forEach(f => {
-    const v = document.getElementById(f).value;
-    record[f] = TEXT.includes(f) ? v : Number(v);
-  });
-  // Keep the other three SYN error fields in step with the one on the page
-  record.srv_serror_rate = record.serror_rate;
-  record.dst_host_serror_rate = record.serror_rate;
-  record.dst_host_srv_serror_rate = record.serror_rate;
+  const inp = readInputs();
+  const record = buildRecord(inp);
   const start = performance.now();
   try {
     const res = await fetch("/predict", {
@@ -112,29 +283,13 @@ async function check() {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Request failed");
-    show(data, Math.round(performance.now() - start));
+    show(data, Math.round(performance.now() - start), inp);
   } catch (e) {
     alert("Something went wrong: " + e.message);
   }
 }
 
-function show(d, ms) {
-  const isAttack = d.prediction === "attack";
-  const v = document.getElementById("verdict");
-  v.textContent = isAttack ? "ATTACK DETECTED" : "NORMAL TRAFFIC";
-  v.className = "verdict " + (isAttack ? "attack" : "normal");
-  const fill = document.getElementById("fill");
-  fill.style.width = (d.attack_probability * 100) + "%";
-  fill.style.background = isAttack ? "var(--red)" : "var(--green)";
-  document.getElementById("prob").textContent = (d.attack_probability * 100).toFixed(2) + "%";
-  document.getElementById("risk").textContent = d.risk_level;
-  document.getElementById("conf").textContent = d.confidence_percent + "%";
-  document.getElementById("time").textContent = ms + " ms";
-  document.getElementById("msg").textContent = d.message;
-  document.getElementById("raw").textContent = JSON.stringify(d, null, 2);
-  document.getElementById("result").style.display = "block";
-}
-
+buildStaticGraphs();
 loadExample("attack");
 </script>
 </body>
