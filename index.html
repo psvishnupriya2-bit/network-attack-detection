@@ -1,477 +1,173 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Network Attack Detection</title>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Network Attack Detection (Real Data)</title>
 <style>
-  :root { --navy:#1f3864; --blue:#2e5395; --bg:#f3f6fb; --red:#c62828; --green:#2e7d32; --amber:#ef8f00; --grey:#8a93a5; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: Arial, Helvetica, sans-serif; background:var(--bg); color:#222; }
-  header { background:var(--navy); color:#fff; padding:28px 20px; text-align:center; }
-  header h1 { margin:0 0 6px; font-size:26px; }
-  header p { margin:0; opacity:.85; font-size:15px; }
-  main { max-width:860px; margin:24px auto; padding:0 16px; }
-  .card { background:#fff; border-radius:10px; padding:22px; margin-bottom:20px; box-shadow:0 1px 4px rgba(0,0,0,.1); }
-  h2 { margin:0 0 14px; font-size:18px; color:var(--navy); }
-  .buttons { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
-  button { border:0; border-radius:6px; padding:10px 18px; font-size:15px; cursor:pointer; }
-  .ex { background:#e4ebf7; color:var(--navy); } .ex:hover { background:#d3dff2; }
-  .go { background:var(--blue); color:#fff; font-weight:bold; } .go:hover { background:var(--navy); }
-  .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:14px; margin-bottom:18px; }
-  label { display:block; font-size:13px; color:#555; margin-bottom:4px; }
-  input, select { width:100%; padding:8px; border:1px solid #c5cddb; border-radius:6px; font-size:14px; }
-  #result { display:none; }
-  .verdict { text-align:center; font-size:34px; font-weight:bold; margin:6px 0 14px; }
-  .attack { color:var(--red); } .normal { color:var(--green); }
+:root{--bg:#f1f5fa;--card:#fff;--ink:#1f2d3d;--head:#1c3d6e;--mut:#5b6b7e;--btn:#e3eaf6;--pri:#2c5497;--bd:#c9d3e0;--bar:#203864;--red:#d64545;--grn:#2f9e63;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1622;--card:#182233;--ink:#e6edf6;--head:#9fc0f0;--mut:#9aa9bd;--btn:#26344b;--pri:#3f6fbf;--bd:#34445c;--bar:#0b1220;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1622;--card:#182233;--ink:#e6edf6;--head:#9fc0f0;--mut:#9aa9bd;--btn:#26344b;--pri:#3f6fbf;--bd:#34445c;--bar:#0b1220;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+header{background:linear-gradient(180deg,var(--bar),#2a4a82);color:#fff;padding:34px 24px 30px;text-align:center}
+header h1{margin:0;font-family:Georgia,'Times New Roman',serif;font-weight:normal;font-size:clamp(26px,5vw,40px);letter-spacing:.08em;text-transform:uppercase}
+header h1:after{content:'';display:block;width:64px;height:2px;background:#9fc0f0;margin:14px auto 0;border-radius:2px}
+header p{margin:14px auto 0;max-width:620px;opacity:.85;font-size:15px;line-height:1.5}
+.wrap{max-width:1040px;margin:0 auto;padding:24px 16px}
+.card{background:var(--card);border-radius:12px;padding:24px 28px;margin-bottom:22px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+h2{margin:0 0 16px;font-size:20px;color:var(--head)}h3{margin:22px 0 8px;font-size:16px;color:var(--head)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.b{background:var(--btn);color:var(--head);border:0;border-radius:6px;padding:12px 20px;font-size:15px;cursor:pointer}
+.pri{background:var(--pri);color:#fff;font-weight:bold}
+.note{color:var(--pri);margin:0 0 16px}.hint{color:var(--mut);font-size:13px;margin:8px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:16px}
+label{display:block;color:var(--mut);font-size:14px;margin-bottom:4px}
+input,select{width:100%;padding:12px;font-size:16px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--ink)}
+.verdict{font-size:26px;font-weight:bold;margin:4px 0 14px}
+.bar{height:28px;border-radius:6px;overflow:hidden;display:flex;margin:6px 0}.bar i{display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-style:normal;transition:width .3s}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.s{border:1px solid var(--bd);border-radius:8px;padding:12px}.s small{color:var(--mut);display:block}.s b{font-size:22px}
+.status{padding:12px 16px;border-radius:8px;font-weight:bold;margin-bottom:14px;color:#fff;background:var(--grn)}
+.tl{display:flex;align-items:flex-end;gap:3px;height:120px;border-bottom:1px solid var(--bd);position:relative}
+.tl div{flex:1;border-radius:3px 3px 0 0;min-height:2px}.tl:after{content:"";position:absolute;left:0;right:0;bottom:50%;border-top:1px dashed var(--mut)}
+.sc{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--bd);white-space:nowrap}th{color:var(--mut);font-weight:normal}
+.tag{padding:3px 10px;border-radius:12px;color:#fff;font-size:12px}
+details pre{background:var(--btn);padding:12px;border-radius:6px;overflow-x:auto;font-size:12px}
+.warn{background:#fff4d6;color:#6b4e00;border-radius:8px;padding:10px 14px;font-size:14px;margin-bottom:14px}
+.cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;max-width:560px;align-items:center}.cm div{padding:12px;border-radius:6px;background:var(--btn);text-align:center}.cm div b{display:block;font-size:20px}
+</style></head><body>
+<header><h1>Network Attack Detection</h1><p>Check whether a network flow looks normal or like an attack. Trained on real recorded traffic (CICIDS2017)</p></header>
+<div class="wrap">
 
-  .tabs { display:flex; gap:6px; flex-wrap:wrap; border-bottom:2px solid #e1e6ef; margin-bottom:18px; }
-  .tab { background:#eef2f9; color:var(--navy); border-radius:8px 8px 0 0; padding:10px 16px; font-size:15px; font-weight:bold; }
-  .tab.active { background:var(--blue); color:#fff; }
-  .pane { display:none; } .pane.show { display:block; }
+<div class="card">
+<h2>1. User Entry: Choose a Recorded Flow</h2>
+<div class="row"><button class="b" id="bAtk">Load attack example</button><button class="b" id="bNor">Load normal example</button></div>
+<p class="note" id="flowNote">Loading recorded flows...</p>
+<div class="grid">
+<div><label>Destination Port</label><input id="port" type="number"></div>
+<div><label>Flow Duration</label><input id="dur" type="number"></div>
+<div><label>Total Fwd Packets</label><input id="fwd" type="number"></div>
+<div><label>Flow Packets/s</label><input id="pps" type="number" step="any"></div>
+</div>
+<button class="b pri" id="check">Check Vulnerability</button>
+</div>
 
-  .chart { max-width:600px; margin:14px auto 20px; }
-  .chart h3 { margin:0 0 4px; font-size:16px; color:var(--navy); }
-  .cap { margin:0 0 10px; font-size:13px; color:#666; }
-  .row { display:flex; align-items:center; gap:10px; margin:7px 0; }
-  .lab { width:140px; font-size:14px; font-weight:bold; flex-shrink:0; }
-  .track { flex:1; height:22px; background:#e6e9ef; border-radius:5px; overflow:hidden; }
-  .bar { height:100%; border-radius:5px; transition:width .6s; }
-  .val { width:92px; text-align:right; font-size:14px; flex-shrink:0; }
-  .legend { font-size:13px; color:#444; margin-top:8px; }
-  .legend span { display:inline-block; margin-right:14px; }
-  .dot { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:5px; vertical-align:middle; }
+<div class="card">
+<h2>2. System Response: Detection Report</h2>
+<div class="warn" id="fallback" hidden style="white-space:pre-wrap;word-break:break-word"></div>
+<div id="empty" class="hint">No check yet. Press "Check Vulnerability".</div>
+<div id="rep" hidden>
+<div class="verdict" id="verdict"></div>
+<h3>Chance of attack and not an attack</h3>
+<div class="bar"><i id="pA" style="background:var(--red)"></i><i id="pN" style="background:var(--grn)"></i></div>
+<p class="hint">The two always add up to 100%.</p>
+<div class="stats">
+<div class="s"><small>Risk level</small><b id="risk"></b></div>
+<div class="s"><small>Confidence</small><b id="conf"></b></div>
+<div class="s"><small>Response time</small><b id="rt"></b></div>
+</div>
+<details><summary>Show raw JSON</summary><pre id="raw"></pre></details>
+</div>
+<div id="metrics" hidden>
+<h3>How reliable (tested on unseen real flows)</h3><div id="mBody"></div>
+</div>
+</div>
 
-  .facts { display:flex; justify-content:center; gap:28px; flex-wrap:wrap; margin-top:12px; font-size:14px; text-align:center; }
-  .facts b { display:block; font-size:18px; }
-  .msg { margin:10px 0 0; font-size:15px; text-align:center; }
-  details { margin-top:14px; text-align:left; font-size:13px; }
-  pre { background:#f1f3f7; padding:10px; border-radius:6px; overflow:auto; }
-
-  .outcomes { display:grid; grid-template-columns:130px 1fr 1fr; gap:6px; max-width:600px; margin:10px auto 6px; font-size:14px; }
-  .outcomes div { padding:12px 10px; border-radius:8px; text-align:center; }
-  .oh { background:#eef2f9; color:var(--navy); font-weight:bold; font-size:13px; }
-  .oc { background:#e3f2e4; } .ow { background:#fdecea; }
-  .oc b, .ow b { display:block; font-size:20px; }
-  .note { max-width:600px; margin:10px auto 0; padding:10px 12px; background:#eef3fb; border-left:4px solid var(--blue); border-radius:6px; font-size:14px; }
-
-
-  .alarmbar { text-align:center; font-size:20px; font-weight:bold; padding:16px; border-radius:10px; margin-bottom:16px; }
-  .alarmbar.clear { background:#e3f2e4; color:var(--green); }
-  .alarmbar.calm { background:#fff4d6; color:#8a5a00; }
-  .alarmbar.alarm { background:var(--red); color:#fff; animation:blink 0.8s infinite; }
-  @keyframes blink { 50% { opacity:.55; } }
-  .controls { display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px; font-size:14px; }
-  .controls select { width:auto; }
-  .start { background:var(--green); color:#fff; font-weight:bold; }
-  .stop { background:var(--red); color:#fff; font-weight:bold; }
-  .reset { background:#e4ebf7; color:var(--navy); }
-  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:18px; }
-  .tile { background:#f3f6fb; border-radius:8px; padding:12px; text-align:center; }
-  .tile b { display:block; font-size:24px; color:var(--navy); margin-top:2px; }
-  .tile span { font-size:12px; color:#666; }
-  .tl { display:flex; align-items:flex-end; gap:3px; height:120px; position:relative; background:#f6f8fc; border-bottom:1px solid #bbb; padding:0 2px; }
-  .tlbar { flex:1; min-width:4px; border-radius:3px 3px 0 0; }
-  .tl50 { position:absolute; left:0; right:0; bottom:50%; border-top:1px dashed #888; }
-  .tllabel { display:flex; justify-content:space-between; font-size:12px; color:#666; margin:4px 0 14px; }
-  table.log { width:100%; border-collapse:collapse; font-size:14px; }
-  table.log th { text-align:left; background:#eef2f9; color:var(--navy); padding:8px; }
-  table.log td { padding:7px 8px; border-bottom:1px solid #e6e9ef; }
-  .tag-a { color:var(--red); font-weight:bold; } .tag-s { color:var(--green); font-weight:bold; }
-  footer { text-align:center; font-size:13px; color:#666; padding-bottom:28px; }
-  footer a { color:var(--blue); }
-</style>
-</head>
-<body>
-<header>
-  <h1>Network Attack Detection</h1>
-  <p>Check whether a network connection looks normal or like an attack</p>
-</header>
-<main>
-  <div class="card">
-    <h2>1. User Entry: Enter Connection Details</h2>
-    <div class="buttons">
-      <button class="ex" onclick="loadExample('attack')">Load attack example</button>
-      <button class="ex" onclick="loadExample('normal')">Load normal example</button>
-    </div>
-    <div class="grid">
-      <div><label>Flag</label>
-        <select id="flag"><option>SF</option><option>S0</option><option>REJ</option><option>RSTO</option><option>RSTR</option><option>SH</option></select></div>
-      <div><label>SYN error rate (0 to 1)</label><input type="number" id="serror_rate" min="0" max="1" step="0.01"></div>
-      <div><label>Connections in last 2 sec (count)</label><input type="number" id="count" min="0"></div>
-      <div><label>Bytes sent (src_bytes)</label><input type="number" id="src_bytes" min="0"></div>
-    </div>
-    <button class="go" onclick="check()">Check Vulnerability</button>
-  </div>
-
-  <div class="card" id="result">
-    <h2>2. System Response: Detection Report</h2>
-    <div class="verdict" id="verdict"></div>
-
-    <div class="tabs">
-      <button class="tab active" id="tab0" onclick="showTab(0)">Result</button>
-      <button class="tab" id="tab1" onclick="showTab(1)">Compare</button>
-      <button class="tab" id="tab2" onclick="showTab(2)">All possibilities</button>
-      <button class="tab" id="tab3" onclick="showTab(3)">How reliable</button>
-    </div>
-
-    <div class="pane show" id="pane0">
-      <div class="chart">
-        <h3>Chance of attack and not an attack</h3>
-        <p class="cap">The two always add up to 100%.</p>
-        <div class="row"><span class="lab">Attack</span><div class="track"><div class="bar" id="barA" style="width:0;background:var(--red)"></div></div><b class="val" id="pctA"></b></div>
-        <div class="row"><span class="lab">Not an attack</span><div class="track"><div class="bar" id="barS" style="width:0;background:var(--green)"></div></div><b class="val" id="pctS"></b></div>
-      </div>
-      <div class="facts">
-        <div>Risk level<b id="risk"></b></div>
-        <div>Confidence<b id="conf"></b></div>
-        <div>Response time<b id="time"></b></div>
-      </div>
-      <p class="msg" id="msg"></p>
-      <details><summary>Show raw JSON</summary><pre id="raw"></pre></details>
-    </div>
-
-    <div class="pane" id="pane1">
-      <div id="compareBox"></div>
-      <div class="legend"><span><i class="dot" style="background:var(--blue)"></i>You</span><span><i class="dot" style="background:var(--green)"></i>Safe example</span><span><i class="dot" style="background:var(--red)"></i>Attack example</span></div>
-    </div>
-
-    <div class="pane" id="pane2">
-      <div class="chart">
-        <h3>Kinds of attacks the model learned from</h3>
-        <p class="cap">Out of 58,630 attack records in the training data.</p>
-        <div id="typesBox"></div>
-        <div class="legend">
-          <span><i class="dot" style="background:var(--red)"></i>Flood (DoS): overload a server</span>
-          <span><i class="dot" style="background:var(--amber)"></i>Scan (Probe): look for weak points</span>
-          <span><i class="dot" style="background:var(--blue)"></i>Break-in (R2L): a stranger tries to get in</span>
-          <span><i class="dot" style="background:var(--grey)"></i>Other rare types</span>
-        </div>
-      </div>
-      <div class="chart">
-        <h3>All 4 possible outcomes of a check</h3>
-        <p class="cap">Real counts from 22,544 test connections the model had never seen.</p>
-        <div class="outcomes">
-          <div class="oh"></div><div class="oh">Model says SAFE</div><div class="oh">Model says ATTACK</div>
-          <div class="oh">Really SAFE</div><div class="oc"><b>9,435</b>Correct: safe passed</div><div class="ow"><b>276</b>False alarm</div>
-          <div class="oh">Really an ATTACK</div><div class="ow"><b>4,380</b>Attack missed</div><div class="oc"><b>8,453</b>Correct: attack caught</div>
-        </div>
-        <div class="note" id="reliab"></div>
-      </div>
-    </div>
-
-    <div class="pane" id="pane3">
-      <div class="chart">
-        <h3>Attacks caught, by model</h3>
-        <p class="cap">Higher is better. This page uses XGBoost.</p>
-        <div id="recallBox"></div>
-      </div>
-      <div class="chart">
-        <h3>False alarms, by model</h3>
-        <p class="cap">Lower is better.</p>
-        <div id="falseBox"></div>
-      </div>
-      <div class="note">Tested on 22,544 unseen connections. This page uses the standard 50% cutoff. Lowering the cutoff to 10% catches 70.7% of attacks, with about 3.0% false alarms.</div>
-    </div>
-  </div>
-
-  <div class="card" id="alarmPanel">
-    <h2>3. Alarm Panel</h2>
-    <div class="alarmbar clear" id="alarmBar">All clear. No checks yet</div>
-
-    <div class="controls">
-      <button class="start" onclick="simStart()">Start demo traffic</button>
-      <button class="stop" onclick="simStop()">Stop</button>
-      <select id="mix">
-        <option value="0.1">Mostly safe (10% attacks)</option>
-        <option value="0.3" selected>Mixed (30% attacks)</option>
-        <option value="0.7">Under attack (70% attacks)</option>
-      </select>
-      <label style="display:inline;margin:0"><input type="checkbox" id="sound" checked style="width:auto"> Alarm sound</label>
-      <button class="reset" onclick="resetPanel()">Reset</button>
-      <span id="simState" style="color:#666"></span>
-    </div>
-
-    <div class="tiles">
-      <div class="tile"><span>Total checks</span><b id="tTotal">0</b></div>
-      <div class="tile"><span>Alarms raised</span><b id="tAlarms">0</b></div>
-      <div class="tile"><span>Safe results</span><b id="tSafe">0</b></div>
-      <div class="tile"><span>Alarm rate</span><b id="tRate">0%</b></div>
-      <div class="tile"><span>Alarms in last 1 min</span><b id="t1">0</b></div>
-      <div class="tile"><span>Alarms in last 5 min</span><b id="t5">0</b></div>
-      <div class="tile"><span>Last alarm at</span><b id="tLast" style="font-size:18px">None yet</b></div>
-      <div class="tile"><span>Session time</span><b id="tSession">00:00</b></div>
-    </div>
-
-    <div class="chart" style="max-width:none">
-      <h3>Timeline: chance of attack for each check</h3>
-      <p class="cap">Each bar is one check (latest 30). Red bars raised an alarm, green bars were safe. The dashed line is the 50% cutoff.</p>
-      <div class="tl" id="tlBox"><div class="tl50"></div></div>
-      <div class="tllabel"><span id="tlFirst">No checks yet</span><span id="tlLast"></span></div>
-    </div>
-
-    <h3 style="margin:0 0 8px;font-size:16px;color:var(--navy)">Alarm log (latest 8 checks)</h3>
-    <div id="logBox"></div>
-    <div class="note" style="max-width:none">These numbers count the checks made on this page, in this browser, since you opened it. They are not from a live network. Demo traffic is simulated: random variations of the two examples, and the model decides each verdict. Refreshing the page resets everything.</div>
-  </div>
-</main>
-<footer>
-  Model: XGBoost trained on NSL-KDD &nbsp;|&nbsp; <a href="/docs">API documentation</a>
-</footer>
+<div class="card">
+<h2>3. Alarm Panel</h2>
+<div class="status" id="status">All clear. No checks yet</div>
+<div class="row">
+<button class="b pri" id="start">Start demo traffic</button><button class="b" id="stop">Stop</button>
+<select id="mix" style="width:auto"><option value=".1">Mostly safe (10% attacks)</option><option value=".3">Mixed (30% attacks)</option><option value=".7">Under attack (70% attacks)</option></select>
+<label style="display:flex;gap:6px;align-items:center;margin:0"><input type="checkbox" id="snd" style="width:auto"> Alarm sound</label>
+<button class="b" id="reset">Reset</button>
+</div>
+<div class="stats">
+<div class="s"><small>Total checks</small><b id="tot">0</b></div>
+<div class="s"><small>Alarms raised</small><b id="alm" style="color:var(--red)">0</b></div>
+<div class="s"><small>Safe results</small><b id="saf" style="color:var(--grn)">0</b></div>
+<div class="s"><small>Alarm rate</small><b id="rate">0%</b></div>
+<div class="s"><small>Alarms in last 1 min</small><b id="m1">0</b></div>
+<div class="s"><small>Alarms in last 5 min</small><b id="m5">0</b></div>
+<div class="s"><small>Last alarm at</small><b id="last" style="font-size:16px">None yet</b></div>
+<div class="s"><small>Session time</small><b id="sess">00:00</b></div>
+</div>
+<h3>Timeline: chance of attack for each check</h3>
+<div class="tl" id="tl"></div>
+<p class="hint">Each bar is one check (latest 30). Red = alarm, green = safe. Dashed line = 50% cutoff.</p>
+<h3>Alarm log (latest 8 checks)</h3>
+<div class="sc"><table><thead><tr><th>Time</th><th>Flow</th><th>Port</th><th>Chance</th><th>Result</th></tr></thead><tbody id="log"></tbody></table></div>
+<p class="hint">These numbers count the checks made on this page since you opened it. Demo traffic replays recorded flows from the CICIDS2017 dataset; the model decides each verdict. Refreshing resets everything.</p>
+</div>
+</div>
 
 <script>
-const BASE = {duration:0,protocol_type:"tcp",service:"private",flag:"S0",src_bytes:0,dst_bytes:0,land:0,wrong_fragment:0,urgent:0,hot:0,num_failed_logins:0,logged_in:0,num_compromised:0,root_shell:0,su_attempted:0,num_root:0,num_file_creations:0,num_shells:0,num_access_files:0,num_outbound_cmds:0,is_host_login:0,is_guest_login:0,count:123,srv_count:6,serror_rate:1.0,srv_serror_rate:1.0,rerror_rate:0.0,srv_rerror_rate:0.0,same_srv_rate:0.05,diff_srv_rate:0.07,srv_diff_host_rate:0.0,dst_host_count:255,dst_host_srv_count:26,dst_host_same_srv_rate:0.1,dst_host_diff_srv_rate:0.05,dst_host_same_src_port_rate:0.0,dst_host_srv_diff_host_rate:0.0,dst_host_serror_rate:1.0,dst_host_srv_serror_rate:1.0,dst_host_rerror_rate:0.0,dst_host_srv_rerror_rate:0.0};
-const EXAMPLES = {
-  attack: BASE,
-  normal: {...BASE,protocol_type:"tcp",service:"ftp_data",flag:"SF",src_bytes:491,dst_bytes:0,count:2,srv_count:2,serror_rate:0.0,srv_serror_rate:0.0,same_srv_rate:1.0,diff_srv_rate:0.0,dst_host_count:150,dst_host_srv_count:25,dst_host_same_srv_rate:0.17,dst_host_diff_srv_rate:0.03,dst_host_same_src_port_rate:0.17,dst_host_serror_rate:0.0,dst_host_srv_serror_rate:0.0,dst_host_rerror_rate:0.05}
+/* ===== SETTINGS: change these to match your app.py ===== */
+const CFG={
+ API_URL:'/api/score',               // POST {rows:[...]}
+ FLOWS_URL:'/api/demo',               // GET {rows:[...]}
+ body:f=>{const K=(flows[0]&&flows[0].keys)||{},r={...(cur||{})};r[K.port]=f.port;r[K.dur]=f.dur;r[K.fwd]=f.fwd;r[K.pps]=f.pps;if(K.lab)delete r[K.lab];return{rows:[r]}},
+ prob:j=>Array.isArray(j.probabilities)?j.probabilities[0]:(j.probability??j.attack_probability), // your API replies {n:1, probabilities:[x]}
+ CUTOFF:.5,
+ METRICS:null /* e.g. {tn:0,fp:0,fn:0,tp:0,note:"Tested on N unseen flows"} from your notebook */
 };
-const FIELDS = ["flag","serror_rate","count","src_bytes"];
-const TEXT = ["flag"];
-let base = EXAMPLES.attack;
-const $ = (id) => document.getElementById(id);
+/* ======================================================= */
+const $=id=>document.getElementById(id);
+let cur=null,flows=[],idx=0,timer=null,t0=Date.now(),hist=[],alarms=[],logRows=[],ctx=null;
+const FALL=[{port:80,dur:300,fwd:25,pps:4000,label:'ATTACK'},{port:53,dur:23204,fwd:1,pps:86.19,label:'BENIGN'}];
 
-// ---------- small chart helper ----------
-function barRow(label, value, max, color, text) {
-  const w = max > 0 ? Math.min(100, (value / max) * 100) : 0;
-  return '<div class="row"><span class="lab">' + label + '</span><div class="track"><div class="bar" style="width:' + w.toFixed(1) + '%;background:' + color + '"></div></div><b class="val">' + text + '</b></div>';
-}
+function toFlow(r){const m={};Object.keys(r).forEach(k=>m[k.trim().toLowerCase()]=k);
+ const K={port:m['destination port'],dur:m['flow duration'],fwd:m['total fwd packets'],pps:m['flow packets/s'],lab:Object.keys(r).find(k=>/label|attack|class/i.test(k))};
+ return{raw:r,keys:K,port:+r[K.port],dur:+r[K.dur],fwd:+r[K.fwd],pps:+r[K.pps],label:K.lab?String(r[K.lab]).trim():''}}
+function parseCSV(t){const L=t.trim().split(/\r?\n/),h=L[0].split(',').map(x=>x.trim().toLowerCase()),
+ c={p:h.indexOf('destination port'),d:h.indexOf('flow duration'),f:h.indexOf('total fwd packets'),r:h.indexOf('flow packets/s'),l:h.findIndex(x=>/label|attack|class/.test(x))};
+ return L.slice(1).map(l=>{const x=l.split(',');return{port:+x[c.p],dur:+x[c.d],fwd:+x[c.f],pps:+x[c.r],label:c.l>=0?(x[c.l]||'').trim():''}}).filter(f=>[f.port,f.dur,f.fwd,f.pps].every(isFinite))}
+const isAtk=f=>f.label&&!/^(benign|normal|0)$/i.test(f.label);
 
-// ---------- fixed graphs (real numbers from the project) ----------
-function buildStaticGraphs() {
-  const red = "var(--red)", amber = "var(--amber)", blue = "var(--blue)", grey = "var(--grey)", green = "var(--green)";
-  const types = [
-    ["neptune (flood)", 41214, red], ["satan (scan)", 3633, amber], ["ipsweep (scan)", 3599, amber],
-    ["portsweep (scan)", 2931, amber], ["smurf (flood)", 2646, red], ["nmap (scan)", 1493, amber],
-    ["back (flood)", 956, red], ["teardrop (flood)", 892, red], ["warezclient (break-in)", 890, blue],
-    ["Other rare types", 376, grey]
-  ];
-  $("typesBox").innerHTML = types.map(t => barRow(t[0], t[1], 41214, t[2], t[1].toLocaleString("en-US"))).join("");
+function fill(f,i){cur=f.raw||null;$('port').value=f.port;$('dur').value=f.dur;$('fwd').value=f.fwd;$('pps').value=f.pps;
+ $('flowNote').textContent=i>=0?`Recorded flow #${i+1} of ${flows.length} is loaded. You can change the values below.`:'Values edited by you.'}
+function pick(a){const f=a[Math.floor(Math.random()*a.length)];idx=flows.indexOf(f);fill(f,idx)}
+const readForm=()=>({port:+$('port').value,dur:+$('dur').value,fwd:+$('fwd').value,pps:+$('pps').value});
 
-  const models = [
-    ["Logistic Regression", 62.4, 7.4, blue], ["Random Forest", 60.8, 2.7, blue],
-    ["XGBoost (used here)", 65.9, 2.8, green], ["XGBoost, 10% cutoff", 70.7, 3.0, blue]
-  ];
-  $("recallBox").innerHTML = models.map(m => barRow(m[0], m[1], 100, m[3], m[1].toFixed(1) + "%")).join("");
-  $("falseBox").innerHTML = models.map(m => barRow(m[0], m[2], 20, m[3], m[2].toFixed(1) + "%")).join("");
-}
+async function predict(f){const t=performance.now();
+ try{const r=await fetch(CFG.API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(CFG.body(f))});
+  const txt=await r.text();let j;try{j=JSON.parse(txt)}catch(e){throw new Error('HTTP '+r.status+': '+txt.slice(0,300))}
+  if(!r.ok)throw new Error('HTTP '+r.status+': '+txt.slice(0,300));
+  const p=CFG.prob(j);if(typeof p!=='number')throw new Error('Reply received, but no attack chance was found in it. Reply: '+txt.slice(0,400));
+  return{p,j,ms:performance.now()-t}}
+ catch(e){return{err:e.message||String(e)}}}
 
-// ---------- tabs ----------
-function showTab(i) {
-  for (let k = 0; k < 4; k++) {
-    $("pane" + k).className = "pane" + (k === i ? " show" : "");
-    $("tab" + k).className = "tab" + (k === i ? " active" : "");
-  }
-}
+function render(r){if(r.err){$('empty').hidden=true;$('rep').hidden=true;$('fallback').hidden=false;$('fallback').textContent='No result. The model API returned a problem: '+r.err;return}
+ const a=r.p>=CFG.CUTOFF,pc=Math.round(r.p*100);
+ $('empty').hidden=true;$('rep').hidden=false;$('fallback').hidden=true;
+ $('verdict').textContent=a?'ATTACK: this flow looks like an attack':'SAFE: this flow looks normal';$('verdict').style.color=`var(${a?'--red':'--grn'})`;
+ $('pA').style.width=pc+'%';$('pA').textContent=pc>8?pc+'%':'';$('pN').style.width=(100-pc)+'%';$('pN').textContent=(100-pc)>8?(100-pc)+'%':'';
+ $('risk').textContent=pc>=80?'High':pc>=50?'Medium-high':pc>=20?'Medium':'Low';
+ $('conf').textContent=Math.max(pc,100-pc)+'%';$('rt').textContent=Math.round(r.ms)+' ms';
+ $('raw').textContent=JSON.stringify(r.j,null,2)}
 
-// ---------- inputs ----------
-function loadExample(name) {
-  base = EXAMPLES[name];
-  FIELDS.forEach(f => $(f).value = base[f]);
-  $("result").style.display = "none";
-}
+function beep(){try{ctx=ctx||new AudioContext();const o=ctx.createOscillator();o.frequency.value=880;o.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.15)}catch(e){}}
+function record(f,r,n){const a=r.p>=CFG.CUTOFF,now=new Date().toLocaleTimeString();hist.push({p:r.p,a});
+ if(a){alarms.push(Date.now());$('last').textContent=now;if($('snd').checked)beep()}
+ const tot=hist.length,al=hist.filter(x=>x.a).length;
+ $('tot').textContent=tot;$('alm').textContent=al;$('saf').textContent=tot-al;$('rate').textContent=Math.round(100*al/tot)+'%';
+ $('m1').textContent=alarms.filter(t=>Date.now()-t<6e4).length;$('m5').textContent=alarms.filter(t=>Date.now()-t<3e5).length;
+ $('status').style.background=`var(${a?'--red':'--grn'})`;$('status').textContent=a?'ALARM: attack-like flow detected':'All clear. Last check was safe';
+ $('tl').innerHTML=hist.slice(-30).map(x=>`<div title="${Math.round(x.p*100)}%" style="height:${Math.max(2,x.p*100)}%;background:var(${x.a?'--red':'--grn'})"></div>`).join('');
+ logRows.unshift(`<tr><td>${now}</td><td>${n>=0?'#'+(n+1):'manual'}</td><td>${f.port}</td><td>${Math.round(r.p*100)}%</td><td><span class="tag" style="background:var(${a?'--red':'--grn'})">${a?'ATTACK':'SAFE'}</span></td></tr>`);
+ logRows=logRows.slice(0,8);$('log').innerHTML=logRows.join('')}
 
-function readInputs() {
-  const inp = {};
-  FIELDS.forEach(f => {
-    const v = $(f).value;
-    inp[f] = TEXT.includes(f) ? v : (Number(v) || 0);
-  });
-  return inp;
-}
+async function run(f,n){const r=await predict(f);render(r);if(!r.err)record(f,r,n)}
+$('check').onclick=()=>run(readForm(),-1);
+$('bAtk').onclick=()=>{const a=flows.filter(isAtk);pick(a.length?a:flows)};
+$('bNor').onclick=()=>{const a=flows.filter(f=>!isAtk(f));pick(a.length?a:flows)};
+$('start').onclick=()=>{if(timer)return;timer=setInterval(()=>{const want=Math.random()<+$('mix').value,a=flows.filter(f=>isAtk(f)===want),pool=a.length?a:flows,f=pool[Math.floor(Math.random()*pool.length)],i=flows.indexOf(f);fill(f,i);run(f,i)},1500)};
+$('stop').onclick=()=>{clearInterval(timer);timer=null};
+$('reset').onclick=()=>{$('stop').click();hist=[];alarms=[];logRows=[];t0=Date.now();['tot','alm','saf','m1','m5'].forEach(i=>$(i).textContent=0);$('rate').textContent='0%';$('last').textContent='None yet';$('tl').innerHTML='';$('log').innerHTML='';$('status').style.background='var(--grn)';$('status').textContent='All clear. No checks yet'};
+setInterval(()=>{const s=Math.floor((Date.now()-t0)/1e3);$('sess').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')},1000);
 
-function buildRecord(inp, b) {
-  const record = {...(b || base), ...inp};
-  record.srv_serror_rate = inp.serror_rate;
-  record.dst_host_serror_rate = inp.serror_rate;
-  record.dst_host_srv_serror_rate = inp.serror_rate;
-  return record;
-}
+if(CFG.METRICS){const m=CFG.METRICS;$('metrics').hidden=false;$('mBody').innerHTML=`<div class="cm"><span></span><b>Model says SAFE</b><b>Model says ATTACK</b><b>Really SAFE</b><div><b>${m.tn.toLocaleString()}</b>Correct: safe passed</div><div><b>${m.fp.toLocaleString()}</b>False alarm</div><b>Really ATTACK</b><div><b>${m.fn.toLocaleString()}</b>Attack missed</div><div><b>${m.tp.toLocaleString()}</b>Correct: attack caught</div></div><p class="hint">${m.note||''}</p>`}
 
-// ---------- compare graph (uses the user's inputs) ----------
-function buildCompare(inp) {
-  const N = EXAMPLES.normal, A = EXAMPLES.attack;
-  function chart(title, cap, you, safe, atk, max, fmt) {
-    return '<div class="chart"><h3>' + title + '</h3><p class="cap">' + cap + '</p>' +
-      barRow("You", you, max, "var(--blue)", fmt(you)) +
-      barRow("Safe example", safe, max, "var(--green)", fmt(safe)) +
-      barRow("Attack example", atk, max, "var(--red)", fmt(atk)) + '</div>';
-  }
-  const pct = (x) => (x * 100).toFixed(0) + "%";
-  const num = (x) => Number(x).toLocaleString("en-US");
-  let html = "";
-  html += chart("SYN error rate", "Share of connection attempts left unfinished. High is a flood warning sign.", inp.serror_rate, N.serror_rate, A.serror_rate, 1, pct);
-  html += chart("Connections in the last 2 seconds", "A flood sends a very large number.", inp.count, N.count, A.count, Math.max(inp.count, A.count, 1), num);
-  html += chart("Bytes sent", "Zero means the connection opened but no real data moved.", inp.src_bytes, N.src_bytes, A.src_bytes, Math.max(inp.src_bytes, N.src_bytes, 1), num);
-  html += '<div class="note">Flag: you <b>' + inp.flag + '</b>, safe example <b>' + N.flag + '</b>, attack example <b>' + A.flag + '</b>. SF means it finished properly; S0 means the server never answered.</div>';
-  $("compareBox").innerHTML = html;
-}
-
-// ---------- show the result ----------
-function show(d, ms, inp) {
-  const isAttack = d.prediction === "attack";
-  const v = $("verdict");
-  v.textContent = isAttack ? "ATTACK DETECTED" : "NORMAL TRAFFIC";
-  v.className = "verdict " + (isAttack ? "attack" : "normal");
-
-  const attackPct = d.attack_probability * 100;
-  const safePct = 100 - attackPct;
-  $("barA").style.width = attackPct.toFixed(2) + "%";
-  $("barS").style.width = safePct.toFixed(2) + "%";
-  $("pctA").textContent = attackPct.toFixed(2) + "%";
-  $("pctS").textContent = safePct.toFixed(2) + "%";
-  $("risk").textContent = d.risk_level;
-  $("conf").textContent = d.confidence_percent + "%";
-  $("time").textContent = ms + " ms";
-  $("msg").textContent = d.message;
-  $("raw").textContent = JSON.stringify(d, null, 2);
-
-  $("reliab").textContent = isAttack
-    ? "Your result says ATTACK. On the test data, when the model said attack it was right about 97% of the time (8,453 of 8,729)."
-    : "Your result says NORMAL. On the test data, when the model said normal it was right about 68% of the time (9,435 of 13,815), because some attacks slip through. Treat it as a first check.";
-
-  buildCompare(inp);
-  showTab(0);
-  $("result").style.display = "block";
-}
-
-async function check() {
-  const inp = readInputs();
-  const record = buildRecord(inp);
-  const start = performance.now();
-  try {
-    const res = await fetch("/predict", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(record)
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Request failed");
-    show(data, Math.round(performance.now() - start), inp);
-    recordEvent(data, inp.flag, "You");
-  } catch (e) {
-    alert("Something went wrong: " + e.message);
-  }
-}
-
-
-// ---------- alarm panel ----------
-const events = [];
-let simTimer = null;
-let audioCtx = null;
-
-function beep() {
-  if (!$("sound").checked) return;
-  try {
-    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-    const t0 = audioCtx.currentTime;
-    [0, 0.25, 0.5].forEach(o => {
-      const osc = audioCtx.createOscillator();
-      const g = audioCtx.createGain();
-      osc.type = "square"; osc.frequency.value = 880; g.gain.value = 0.05;
-      osc.connect(g); g.connect(audioCtx.destination);
-      osc.start(t0 + o); osc.stop(t0 + o + 0.15);
-    });
-  } catch (e) {}
-}
-
-function fmtTime(t) { return t.toLocaleTimeString("en-GB"); }
-function mmss(sec) {
-  return String(Math.floor(sec / 60)).padStart(2, "0") + ":" + String(sec % 60).padStart(2, "0");
-}
-
-function recordEvent(d, flag, source) {
-  const attack = d.prediction === "attack";
-  events.push({t: new Date(), attack: attack, p: d.attack_probability, flag: flag, source: source});
-  if (attack) beep();
-  renderPanel();
-}
-
-function renderPanel() {
-  const now = Date.now();
-  const total = events.length;
-  const alarms = events.filter(e => e.attack);
-  const last1 = alarms.filter(e => now - e.t.getTime() <= 60000).length;
-  const last5 = alarms.filter(e => now - e.t.getTime() <= 300000).length;
-  const rate = total ? (alarms.length / total) * 100 : 0;
-
-  $("tTotal").textContent = total;
-  $("tAlarms").textContent = alarms.length;
-  $("tSafe").textContent = total - alarms.length;
-  $("tRate").textContent = rate.toFixed(0) + "%";
-  $("t1").textContent = last1;
-  $("t5").textContent = last5;
-  $("tLast").textContent = alarms.length ? fmtTime(alarms[alarms.length - 1].t) : "None yet";
-  $("tSession").textContent = total ? mmss(Math.floor((now - events[0].t.getTime()) / 1000)) : "00:00";
-
-  const bar = $("alarmBar");
-  if (alarms.length && now - alarms[alarms.length - 1].t.getTime() <= 10000) {
-    bar.className = "alarmbar alarm";
-    bar.textContent = "ALARM! Attack detected at " + fmtTime(alarms[alarms.length - 1].t);
-  } else if (alarms.length) {
-    bar.className = "alarmbar calm";
-    bar.textContent = "Calm now. Last alarm at " + fmtTime(alarms[alarms.length - 1].t);
-  } else {
-    bar.className = "alarmbar clear";
-    bar.textContent = total ? "All clear. No alarms so far" : "All clear. No checks yet";
-  }
-
-  const recent = events.slice(-30);
-  $("tlBox").innerHTML = '<div class="tl50"></div>' + recent.map(e =>
-    '<div class="tlbar" title="' + fmtTime(e.t) + ': ' + (e.p * 100).toFixed(1) + '% chance of attack" style="height:' +
-    Math.max(3, e.p * 100).toFixed(1) + '%;background:' + (e.attack ? "var(--red)" : "var(--green)") + '"></div>').join("");
-  $("tlFirst").textContent = recent.length ? "First shown: " + fmtTime(recent[0].t) : "No checks yet";
-  $("tlLast").textContent = recent.length ? "Latest: " + fmtTime(recent[recent.length - 1].t) : "";
-
-  const rows = events.slice(-8).reverse().map(e =>
-    "<tr><td>" + fmtTime(e.t) + "</td><td>" + e.source + "</td><td class=\"" + (e.attack ? "tag-a" : "tag-s") + "\">" +
-    (e.attack ? "ALARM (attack)" : "Safe") + "</td><td>" + (e.p * 100).toFixed(2) + "%</td><td>" + e.flag + "</td></tr>").join("");
-  $("logBox").innerHTML = total
-    ? '<table class="log"><tr><th>Time</th><th>Source</th><th>Verdict</th><th>Chance of attack</th><th>Flag</th></tr>' + rows + "</table>"
-    : "<p class=\"cap\">No checks yet. Click Check Vulnerability, or Start demo traffic.</p>";
-}
-
-function resetPanel() { events.length = 0; renderPanel(); }
-
-// ---------- demo traffic (simulated) ----------
-function simStop() {
-  if (simTimer) clearInterval(simTimer);
-  simTimer = null;
-  $("simState").textContent = "Demo traffic stopped";
-}
-
-function simStart() {
-  if (simTimer) return;
-  $("simState").textContent = "Demo traffic running (one check every 3 seconds)";
-  simTick();
-  simTimer = setInterval(simTick, 3000);
-}
-
-async function simTick() {
-  const rnd = (a, b) => Math.floor(a + Math.random() * (b - a + 1));
-  const isAttack = Math.random() < Number($("mix").value);
-  const inp = isAttack
-    ? {flag: "S0", serror_rate: 0.8 + rnd(0, 20) / 100, count: rnd(90, 250), src_bytes: 0}
-    : {flag: "SF", serror_rate: 0, count: rnd(1, 8), src_bytes: rnd(100, 900)};
-  const record = buildRecord(inp, isAttack ? EXAMPLES.attack : EXAMPLES.normal);
-  try {
-    const res = await fetch("/predict", {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(record)
-    });
-    const data = await res.json();
-    if (res.ok) recordEvent(data, inp.flag, "Demo");
-  } catch (e) {
-    simStop();
-    $("simState").textContent = "Demo stopped: could not reach the server";
-  }
-}
-
-setInterval(renderPanel, 1000);
-renderPanel();
-
-buildStaticGraphs();
-loadExample("attack");
-</script>
-</body>
-</html>
+fetch(CFG.FLOWS_URL).then(r=>r.json()).then(j=>{flows=(j.rows||j).map(toFlow).filter(f=>[f.port,f.dur,f.fwd,f.pps].every(isFinite));if(!flows.length)throw 0}).catch(()=>{flows=FALL;$('flowNote').textContent='Could not load /api/demo; using 2 built-in examples.'})
+ .finally(()=>{idx=0;fill(flows[0],0)});
+</script></body></html>
