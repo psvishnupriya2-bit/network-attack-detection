@@ -1,50 +1,34 @@
-# Network Attack Detection
-**Live demo:** https://network-attack-detection-1.onrender.com
+# Network Attack Detection (Real Traffic)
 
-*Free hosting: the first load after a quiet period can take about a minute.*
-
-A machine learning project that flags suspicious network traffic as "normal" or "attack", served through a fast API.
+A machine learning project that checks whether a network flow looks **normal** or like an **attack**. It is trained on real recorded traffic from the CIC-IDS2017 dataset and served with FastAPI.
 
 ## Dataset
-NSL-KDD (KDDTrain+ and KDDTest+). About 126,000 training records and 22,500 test records.
-The test set includes attack types that never appear in training, so it is a hard, realistic test.
+CIC-IDS2017: real network flows recorded over several days, labelled as BENIGN (normal) or as different attack types.
 
 ## What I did
-1. Loaded and explored the data (47% of the training records are attacks).
-2. Converted text columns to numbers with one-hot encoding.
-3. Trained a baseline (Logistic Regression), then Random Forest and XGBoost.
-4. Tested ways to handle rare attacks: class weights and SMOTE.
-5. Evaluated with recall, precision, F1, false alarm rate and PR-AUC.
-6. Saved the best model and served it with FastAPI.
+1. Loaded and cleaned the CIC-IDS2017 data.
+2. Trained an XGBoost model to tell normal flows from attacks.
+3. Tested it on unseen real flows.
+4. Saved the model and its column order.
+5. Built a FastAPI app and a web page to check flows and show alarms.
 
-## Results (on KDDTest+)
+## Project files
+- `app.py`: FastAPI server
+- `index.html`: web page (report and alarm panel)
+- `real_data.ipynb`: notebook with training and testing
+- `models/real_model.json`: trained model
+- `models/real_columns.json`: column order used by the model
+- `data/demo_flows.csv`: recorded flows used for the demo
+- `requirements.txt`: Python packages
 
-| Model | Attack recall | Attack precision | False alarm rate |
-|---|---|---|---|
-| Logistic Regression (baseline) | 0.624 | 0.917 | 0.074 |
-| Random Forest | 0.608 | 0.967 | 0.027 |
-| XGBoost | 0.659 | 0.968 | 0.028 |
-| XGBoost, threshold 0.1 | 0.707 | 0.969 | 0.030 |
-
-- XGBoost PR-AUC: 0.968
-- XGBoost missed 4,380 attacks, compared with 4,828 for the baseline, and cut false alarms from 7.4% to 2.8%.
-- Lowering the decision threshold to 0.1 caught more attacks (recall 0.707) with only a small rise in false alarms.
-- Class weights and SMOTE gave only small gains on this dataset.
-- API speed: average 40.1 ms per request, 95% of requests under 45.1 ms (100 requests, tested on a laptop).
-
-## Run it yourself
+## How to run
 ```
 pip install -r requirements.txt
-python download_data.py
 uvicorn app:app --reload
 ```
-Then open http://127.0.0.1:8000/ to try the API.
+Then open http://127.0.0.1:8000/ in your browser.
 
-## Files
-- `attack_detection.ipynb`: data exploration, training and evaluation
-- `app.py`: FastAPI service
-- `models/`: saved model, column order and a sample request
-- `download_data.py`: downloads the dataset
-
-## Limitations
-NSL-KDD is an older benchmark, and the test set contains unseen attack types, so recall is limited. Real network traffic would need fresher data.
+## How to use
+1. Click **Load attack example** or **Load normal example**.
+2. Click **Check Vulnerability** to see the result.
+3. Click **Start demo traffic** to see the alarm panel update.
