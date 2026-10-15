@@ -161,7 +161,7 @@ async function run(f,n){const r=await predict(f);if(n>=0&&!timer)return;render(r
 $('check').onclick=()=>run(readForm(),-1);
 $('bAtk').onclick=()=>{const a=flows.filter(isAtk);pick(a.length?a:flows)};
 $('bNor').onclick=()=>{const a=flows.filter(f=>!isAtk(f));pick(a.length?a:flows)};
-$('start').onclick=()=>{if(timer)return;timer=setInterval(()=>{const want=Math.random()<+$('mix').value,a=flows.filter(f=>isAtk(f)===want),pool=a.length?a:flows,f=pool[Math.floor(Math.random()*pool.length)],i=flows.indexOf(f);fill(f,i);run(f,i)},5000)};
+$('start').onclick=()=>{if(timer)return;timer=setInterval(()=>{const want=Math.random()<+$('mix').value,a=flows.filter(f=>isAtk(f)===want),pool=a.length?a:flows,f=pool[Math.floor(Math.random()*pool.length)],i=flows.indexOf(f);run(f,i)},5000)};
 $('stop').onclick=()=>{clearInterval(timer);timer=null;$('status').style.background='var(--pri)';$('status').textContent='Demo stopped'};
 $('reset').onclick=()=>{$('stop').click();hist=[];alarms=[];logRows=[];t0=Date.now();['tot','alm','saf','m1','m5'].forEach(i=>$(i).textContent=0);$('rate').textContent='0%';$('last').textContent='None yet';$('tl').innerHTML='';$('log').innerHTML='';$('status').style.background='var(--grn)';$('status').textContent='All clear. No checks yet'};
 setInterval(()=>{const s=Math.floor((Date.now()-t0)/1e3);$('sess').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')},1000);
