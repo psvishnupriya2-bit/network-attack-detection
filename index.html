@@ -106,7 +106,7 @@ details pre{background:var(--btn);padding:12px;border-radius:6px;overflow-x:auto
 const CFG={
  API_URL:'/api/score',               // POST {rows:[...]}
  FLOWS_URL:'/api/demo',               // GET {rows:[...]}
- body:f=>{const K=(flows[0]&&flows[0].keys)||{},r={...(cur||{})};r[K.port]=f.port;r[K.dur]=f.dur;r[K.fwd]=f.fwd;r[K.pps]=f.pps;if(K.lab)delete r[K.lab];return{rows:[r]}},
+ body:f=>{const K=(flows[0]&&flows[0].keys)||{},r={...(f.raw||cur||{})};r[K.port]=f.port;r[K.dur]=f.dur;r[K.fwd]=f.fwd;r[K.pps]=f.pps;if(K.lab)delete r[K.lab];return{rows:[r]}},
  prob:j=>Array.isArray(j.probabilities)?j.probabilities[0]:(j.probability??j.attack_probability), // your API replies {n:1, probabilities:[x]}
  CUTOFF:.5,
  METRICS:null /* e.g. {tn:0,fp:0,fn:0,tp:0,note:"Tested on N unseen flows"} from your notebook */
