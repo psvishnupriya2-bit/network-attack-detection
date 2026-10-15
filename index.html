@@ -96,7 +96,7 @@ details pre{background:var(--btn);padding:12px;border-radius:6px;overflow-x:auto
 <div class="tl" id="tl"></div>
 <p class="hint">Each bar is one check (latest 30). Red = alarm, green = safe. Dashed line = 50% cutoff.</p>
 <h3>Alarm log (latest 8 checks)</h3>
-<div class="sc"><table><thead><tr><th>Time</th><th>Flow</th><th>Port</th><th>Chance</th><th>Result</th></tr></thead><tbody id="log"></tbody></table></div>
+<div class="sc"><table><thead><tr><th>Time</th><th>Flow</th><th>Port</th><th>Chance</th><th>Result</th><th>Real label</th></tr></thead><tbody id="log"></tbody></table></div>
 <p class="hint">These numbers count the checks made on this page since you opened it. Demo traffic replays recorded flows from the CICIDS2017 dataset; the model decides each verdict. Refreshing resets everything.</p>
 </div>
 </div>
@@ -154,7 +154,7 @@ function record(f,r,n){const a=r.p>=CFG.CUTOFF,now=new Date().toLocaleTimeString
  $('m1').textContent=alarms.filter(t=>Date.now()-t<6e4).length;$('m5').textContent=alarms.filter(t=>Date.now()-t<3e5).length;
  $('status').style.background=`var(${a?'--red':'--grn'})`;$('status').textContent=a?'ALARM: attack-like flow detected':'All clear. Last check was safe';
  $('tl').innerHTML=hist.slice(-30).map(x=>`<div title="${Math.round(x.p*100)}%" style="height:${Math.max(2,x.p*100)}%;background:var(${x.a?'--red':'--grn'})"></div>`).join('');
- logRows.unshift(`<tr><td>${now}</td><td>${n>=0?'#'+(n+1):'manual'}</td><td>${f.port}</td><td>${Math.round(r.p*100)}%</td><td><span class="tag" style="background:var(${a?'--red':'--grn'})">${a?'ATTACK':'SAFE'}</span></td></tr>`);
+ logRows.unshift(`<tr><td>${now}</td><td>${n>=0?'#'+(n+1):'manual'}</td><td>${f.port}</td><td>${Math.round(r.p*100)}%</td><td><span class="tag" style="background:var(${a?'--red':'--grn'})">${a?'ATTACK':'SAFE'}</span></td><td>${f.label||'-'}</td></tr>`);
  logRows=logRows.slice(0,8);$('log').innerHTML=logRows.join('')}
 
 async function run(f,n){const r=await predict(f);if(n>=0&&!timer)return;render(r);if(!r.err&&n>=0)record(f,r,n)}
