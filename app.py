@@ -46,7 +46,7 @@ def health():
 
 @app.get("/api/demo", tags=["Demo"])
 def demo():
-    path = BASE / "models" / "demo_flows.csv"
+    path = BASE / "data" / "demo_flows.csv"
     if not path.exists():
         raise HTTPException(status_code=404, detail="Demo file not found")
     df = pd.read_csv(path)
